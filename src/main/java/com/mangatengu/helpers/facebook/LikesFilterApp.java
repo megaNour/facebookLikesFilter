@@ -6,17 +6,27 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 
 public class LikesFilterApp {
-    public static final String ELIMINATOR = "en commun";
+    public static final String EN_COMMUN = "en commun";
+	public static final String INVITER = "inviter";
+	public static final String AIME_DEJA = "aime déjà";
+    public static Set<String> unwanted;
+    static {
+    	 unwanted = new TreeSet<>();
+    	 unwanted.add(EN_COMMUN);
+    	 unwanted.add(INVITER);
+    	 unwanted.add(AIME_DEJA);
+    }
     public static void main(String[] args) {
-        Set<String> listeFinale = new TreeSet<>();
+        Map<String, Integer> listeNonClassee = new HashMap<>();
+        Set<LikesPerPerson> listeClassee = new TreeSet<>(new LikesComparator());
         Path origine = Paths.get(args[0]);
         Path destination = Paths.get(args[1]);
         
@@ -24,15 +34,28 @@ public class LikesFilterApp {
             BufferedReader br = new BufferedReader(fr);
             String line;
             while ((line = br.readLine()) != null) {
-                if (!line.endsWith(ELIMINATOR) && !line.equals("Inviter"))
-                listeFinale.add(line);
+            	boolean accepted = true; 
+            	for(String s : unwanted) {
+            		if (line.toLowerCase().contains(s.toLowerCase()) || line.isEmpty()) {
+            			accepted = false;
+            		}
+            	}
+                if (accepted) {
+                	Integer i = listeNonClassee.get(line);
+                	System.out.println(i + " :::: " + line);
+                	if(i != null) listeNonClassee.put(line, i+1);
+                	else listeNonClassee.put(line, 1);
+                }
             }
-            
-            
+            for (String s : listeNonClassee.keySet()) {
+            	System.out.println(s + " " + listeNonClassee.get(s));
+            	boolean putted = listeClassee.add(new LikesPerPerson(s, listeNonClassee.get(s)));
+            	System.out.println(putted);
+            }
             PrintStream ps = new PrintStream(destination.toFile());
-            Iterator<String> i = listeFinale.iterator();
+            Iterator<LikesPerPerson> i = listeClassee.iterator();
             while (i.hasNext()) {
-                String result = i.next();
+                LikesPerPerson result = i.next();
                 ps.println(result);
                 System.out.println(result);
             }
